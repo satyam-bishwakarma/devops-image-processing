@@ -1,0 +1,11 @@
+{
+  "github_repository_url": "https://github.com/satyam-bishwakarma/devops-image-processing",
+  "github_usernames": [
+    "satyam-bishwakarma",
+    "Sushil905",
+    "Pathakarnav22"
+  ],
+  "aws_profile_name": "default",
+  "aws_region": "TO_BE_CONFIRMED",
+  "note": "Non-secret settings only. Never add passwords, tokens, keys, or session credentials."
+}

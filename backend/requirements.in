@@ -1,0 +1,4 @@
+fastapi
+pillow
+prometheus-client
+uvicorn
