@@ -1,0 +1,53 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: image-processing-monitoring
+  namespace: kube-system
+spec:
+  chart: kube-prometheus-stack
+  repo: https://prometheus-community.github.io/helm-charts
+  version: 93.2.0
+  targetNamespace: image-monitoring
+  createNamespace: true
+  timeout: 8m
+  valuesContent: |-
+    fullnameOverride: image-monitoring
+    defaultRules:
+      create: false
+    alertmanager:
+      enabled: false
+    nodeExporter:
+      enabled: false
+    kubeEtcd:
+      enabled: false
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeProxy:
+      enabled: false
+    prometheus:
+      prometheusSpec:
+        retention: 1d
+        retentionSize: 400MB
+        podMonitorSelectorNilUsesHelmValues: false
+        podMonitorNamespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: image-processing
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 768Mi
+    grafana:
+      defaultDashboardsEnabled: false
+      sidecar:
+        dashboards:
+          enabled: true
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 384Mi

@@ -1,13 +1,13 @@
-# AWS lab verification
+# AWS lab evidence
 
-The lab was provisioned in Sydney with three Free-plan-eligible c7i-flex.large instances in one VPC. The original t3.large request was rejected by the AWS Free plan before any hosts launched.
+The lab runs one Jenkins automation host, one K3s server, and one K3s worker in a shared VPC in Sydney (`ap-southeast-2`). The instances use AWS Systems Manager for administration. The K3s nodes were both Ready on `v1.35.10+k3s1` during verification.
 
-| Check | Result | Systems Manager command |
-| --- | --- | --- |
-| Automation host | Docker engine reachable. Jenkins login returned success on loopback port 8080. | c2d56e62-a937-477f-b054-b7093412c811 |
-| Application container | The staged app snapshot built on the automation host. HTTP smoke checks passed for conversion, invalid and oversized uploads, version and metrics. | 3d0f8ec3-a883-4021-b6b0-a4c9f35580cc |
-| K3s | Control plane and worker were both Ready on v1.35.10+k3s1 using containerd. | c94a86da-f4bc-45ea-a9cf-9d57b6f8a186 |
+| Check | Verified result |
+| --- | --- |
+| Jenkins and Docker | Jenkins build #4 checked out [`aa7b811`](https://github.com/satyam-bishwakarma/devops-image-processing/commit/aa7b8117cb5cd35fd3fde081b98467c8628726c6), passed its smoke checks, and published the green image to GHCR. |
+| Kubernetes deployment | Blue and green were both ready. The active Service served build `e9c9faf` and the preview Service served `aa7b811` before promotion. |
+| CPU autoscaling | Four workers sent 1200 × 1200 PNG conversions for 125 seconds. The active Deployment scaled from 1 to 4 replicas and returned to 1 after cooldown. The load run completed 597 conversions without an observed failure. |
+| Monitoring | Prometheus scraped both colours. Grafana's **Image Processing Lab** dashboard used the healthy Prometheus datasource and displayed panels for conversion rate, p95 processing time, and HPA replicas. Monitoring was verified separately from the recorded scaling run. |
+| Blue/green promotion and rollback | The active Service went blue → green → blue under traffic. The probe completed 101 conversions without an observed failure and sampled both build versions. |
 
-The container check ran directly through Systems Manager. The Jenkins agent and repository job, registry publishing, application deployment, dashboards, autoscaling and traffic promotion still require live verification.
-
-The AWS budget uses a USD 25 monthly threshold with USD 10 and USD 20 actual-cost alerts before credits. Stop the instances between sessions to limit compute charges. Their attached storage is retained.
+The reproducible starting digests are in [the deployment overlay](../../deploy/kustomization.yaml). Use the [demo runbook](../runbooks/next-milestones.md) to repeat the checks and capture the final review recordings.

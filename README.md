@@ -1,10 +1,18 @@
-# Automated DevOps Pipeline for Scalable Image Processing
+# Scalable Image Processing
 
-Three-member DevOps course project. The shared baseline accepts JPEG, PNG, and WebP images and returns a PNG with an in-browser preview. The API exposes health, version, and Prometheus metrics endpoints.
+A DevOps course project that takes an image-processing web app through build, deployment, monitoring, autoscaling, and release rollback. The React UI accepts JPEG, PNG, and WebP. FastAPI and Pillow convert uploads to PNG, with optional resize and crop.
 
-## Run locally on Windows
+## Run locally
 
-Run from the repository root with Node.js and Python installed.
+From the repository root, with Docker running:
+
+```sh
+docker compose up --build
+```
+
+Open [the image processing app](http://127.0.0.1:8000). Use `docker compose down` to stop it.
+
+For a Windows setup with Node.js 22 and Python 3.12:
 
 ```powershell
 npm.cmd --prefix frontend ci
@@ -14,35 +22,18 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
 ```
 
-Open http://127.0.0.1:8000. In a second terminal, run `.\.venv\Scripts\python.exe scripts/smoke.py` to check the running app.
+In a second terminal, run `.\.venv\Scripts\python.exe scripts/smoke.py` against the running app. The smoke checks cover the UI, PNG conversion, invalid and oversized inputs, build version, and metrics.
 
-With Docker running, `docker compose up --build` builds and serves the same app at that address. Stop it with `docker compose down`.
+## Deployment and review
 
-The Jenkinsfile builds and smoke tests the image on a Linux agent labelled `docker`. The Kubernetes base contains blue and green Deployments, active and preview Services, and CPU HPAs. Supply real image digests and an environment namespace before deploying. See [implementation and review checklist](docs/runbooks/next-milestones.md) for the remaining integration work.
+- [DevOps architecture and tool trade-offs](docs/architecture/devops.md)
+- [Demo runbook](docs/runbooks/next-milestones.md) for private access, deployment, scaling, and rollback
+- [Verified AWS lab results](docs/evidence/aws-lab.md) for Jenkins, K3s, autoscaling, and the blue/green test
+- [AWS provisioning](infra/terraform/README.md) and [host setup](infra/ansible/README.md)
+- [Prometheus and Grafana installation](monitoring/prometheus/README.md)
 
-## Planned stack
+Jenkins builds, smoke tests, and publishes the image to GHCR from `main`. It archives the immutable image reference in `image-reference.txt`. A release operator deploys the image to the idle colour, tests it via the preview Service, and switches the active Service. Kubernetes HPA scales each colour on CPU via Metrics Server. Prometheus scrapes application metrics, and Grafana graphs them alongside HPA replica counts.
 
-React, FastAPI, Pillow, GitHub, AWS VPC/EC2/IAM, Terraform, Ansible, Jenkins, Docker, GHCR, K3s, Traefik, Prometheus, Grafana, HPA, and k6. Start with CPU scaling, then add Prometheus Adapter for custom metrics. Demonstrate blue-green preview, promotion, and rollback.
+## Working together
 
-## Structure
-
-- frontend/ and backend/: application source
-- tests/: integration and load tests
-- infra/terraform/: AWS provisioning
-- infra/ansible/: machine configuration
-- deploy/: Kubernetes manifests
-- monitoring/: metrics and dashboard configuration
-- scripts/release/: release automation
-- docs/: architecture, runbooks, and review evidence
-
-## Collaboration
-
-Use feature branches and focused pull requests. Rotate reviews, implementation areas, and release operation. Everyone contributes to frontend, backend, tests, and operations. Preserve accurate authorship and record generated scaffolding as shared setup work.
-
-## Credentials
-
-Use authenticated connections and AWS profiles. Store runtime secrets in credential stores, outside this repository. Do not add passwords, access tokens, private keys, kubeconfigs, Terraform state, or credential exports. Ignore rules do not encrypt files or prevent privileged access.
-
-## Next decisions
-
-Team GitHub accounts: satyam-bishwakarma, Sushil905, and Pathakarnav22. Collaborator invitations were sent to both teammates. Confirm deployment region, budget, and review deadline. Access was verified locally; verification does not establish all provisioning permissions or available credits.
+The repository collaborators are `satyam-bishwakarma`, `Sushil905`, and `Pathakarnav22`. Use a feature branch for each change, record its verification in the PR, and request a teammate's review before merging. Use individual GitHub and AWS identities. Keep GHCR tokens, Jenkins credentials, kubeconfigs, private keys, and Terraform state outside Git.

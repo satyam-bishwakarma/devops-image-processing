@@ -3,16 +3,30 @@ kind: Kustomization
 namespace: image-processing
 resources:
   - base/application.yaml
-images:
-  - name: image-processing
-    newName: ghcr.io/satyam-bishwakarma/devops-image-processing
-    digest: sha256:ba71a5ba29c19ef70d61a83ad8ce6d1bcd20e48bd902a80a8f9ebbd8f837cc2b
 patches:
-  - target:
+  - patch: |-
+      apiVersion: apps/v1
       kind: Deployment
-      name: image-processing-(blue|green)
-    patch: |-
-      - op: add
-        path: /spec/template/spec/imagePullSecrets
-        value:
-          - name: ghcr-pull
+      metadata:
+        name: image-processing-blue
+      spec:
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-pull
+            containers:
+              - name: app
+                image: ghcr.io/satyam-bishwakarma/devops-image-processing@sha256:ba71a5ba29c19ef70d61a83ad8ce6d1bcd20e48bd902a80a8f9ebbd8f837cc2b
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: image-processing-green
+      spec:
+        template:
+          spec:
+            imagePullSecrets:
+              - name: ghcr-pull
+            containers:
+              - name: app
+                image: ghcr.io/satyam-bishwakarma/devops-image-processing@sha256:6f2a3c22f67728f7caf81008a92b997fbf9056d692d7c2ac4d940ffe26a1477a
