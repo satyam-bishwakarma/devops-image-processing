@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: image-processing
+spec:
+  selector:
+    matchLabels:
+      app: image-processing
+  podTargetLabels:
+    - color
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
