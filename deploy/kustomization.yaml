@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: image-processing
+resources:
+  - base/application.yaml
+images:
+  - name: image-processing
+    newName: ghcr.io/satyam-bishwakarma/devops-image-processing
+    digest: sha256:ba71a5ba29c19ef70d61a83ad8ce6d1bcd20e48bd902a80a8f9ebbd8f837cc2b
+patches:
+  - target:
+      kind: Deployment
+      name: image-processing-(blue|green)
+    patch: |-
+      - op: add
+        path: /spec/template/spec/imagePullSecrets
+        value:
+          - name: ghcr-pull
