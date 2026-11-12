@@ -39,6 +39,7 @@ pipeline {
                                 "$SONAR_SCANNER_IMAGE" \\
                                 -Dsonar.projectKey=image-processing \\
                                 -Dsonar.sources=backend,frontend/src,infra,deploy,scripts \\
+                                -Dsonar.working.directory=/tmp/image-processing-scanner-work \\
                                 -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300
                         '''
                     }
