@@ -2,6 +2,8 @@ pipeline {
     agent { label 'docker' }
     environment {
         GHCR_IMAGE = 'ghcr.io/satyam-bishwakarma/devops-image-processing'
+        SONAR_SCANNER_IMAGE = 'sonarsource/sonar-scanner-cli:12.4.0.4321_8.4.0'
+        TRIVY_IMAGE = 'aquasec/trivy:0.76.2'
     }
     options {
         disableConcurrentBuilds()
@@ -23,7 +25,55 @@ pipeline {
                 '''
             }
         }
+        stage('SonarQube analysis and quality gate') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
+                    withCredentials([string(credentialsId: 'image-processing-sonar-token', variable: 'SONAR_TOKEN')]) {
+                        sh '''
+                            set +x
+                            docker run --rm --user 0 --cap-drop ALL --security-opt no-new-privileges \\
+                                --network image-processing-security \\
+                                -e SONAR_TOKEN -e SONAR_HOST_URL=http://sonarqube:9000 \\
+                                -v "$WORKSPACE:/usr/src" -w /usr/src \\
+                                "$SONAR_SCANNER_IMAGE" \\
+                                -Dsonar.projectKey=image-processing \\
+                                -Dsonar.sources=backend,frontend/src,infra,deploy,scripts \\
+                                -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300
+                        '''
+                    }
+                }
+            }
+        }
+        stage('Trivy image security scan') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', catchInterruptions: false) {
+                    sh '''
+                        scan_dir=$(mktemp -d)
+                        trap 'rm -rf "$scan_dir"' EXIT
+                        rm -f trivy-image-report.txt
+                        docker save -o "$scan_dir/image.tar" "image-processing-ci:$BUILD_TAG"
+                        status=0
+                        docker run --rm --cap-drop ALL --security-opt no-new-privileges \\
+                            -v "$scan_dir:/scan:ro" \\
+                            -v image-processing-trivy-cache:/root/.cache/trivy \\
+                            "$TRIVY_IMAGE" image --input /scan/image.tar \\
+                            --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 1 \\
+                            --timeout 5m --no-progress > trivy-image-report.txt 2>&1 || status=$?
+                        cat trivy-image-report.txt
+                        exit "$status"
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-image-report.txt', allowEmptyArchive: true
+                }
+            }
+        }
         stage('Publish tested image') {
+            when {
+                expression { currentBuild.currentResult == 'SUCCESS' }
+            }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'ghcr-image-processing-publish', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')]) {
                     sh '''
