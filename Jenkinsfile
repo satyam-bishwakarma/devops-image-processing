@@ -31,15 +31,27 @@ pipeline {
                     withCredentials([string(credentialsId: 'image-processing-sonar-token', variable: 'SONAR_TOKEN')]) {
                         sh '''
                             set +x
+                            ready=false
+                            for attempt in $(seq 1 30); do
+                                if curl -fsS --max-time 3 http://127.0.0.1:9000/api/system/status 2>/dev/null | grep -q '"UP"'; then
+                                    ready=true
+                                    break
+                                fi
+                                sleep 4
+                            done
+                            test "$ready" = true || { echo 'SonarQube did not become ready'; exit 1; }
                             docker run --rm --user 0 --cap-drop ALL --security-opt no-new-privileges \\
+                                --memory 1200m --memory-swap 2g --cpus 1 \\
                                 --network image-processing-security \\
                                 -e SONAR_TOKEN -e SONAR_HOST_URL=http://sonarqube:9000 \\
                                 -e SONAR_USER_HOME=/tmp/sonar-home \\
+                                -e SONAR_SCANNER_JAVA_OPTS=-Xmx384m \\
                                 -v "$WORKSPACE:/usr/src" -w /usr/src \\
                                 "$SONAR_SCANNER_IMAGE" \\
                                 -Dsonar.projectKey=image-processing \\
                                 -Dsonar.sources=backend,frontend/src,infra,deploy,scripts \\
                                 -Dsonar.working.directory=/tmp/image-processing-scanner-work \\
+                                -Dsonar.javascript.node.maxspace=512 \\
                                 -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300
                         '''
                     }
