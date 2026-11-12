@@ -34,6 +34,7 @@ pipeline {
                             docker run --rm --user 0 --cap-drop ALL --security-opt no-new-privileges \\
                                 --network image-processing-security \\
                                 -e SONAR_TOKEN -e SONAR_HOST_URL=http://sonarqube:9000 \\
+                                -e SONAR_USER_HOME=/tmp/sonar-home \\
                                 -v "$WORKSPACE:/usr/src" -w /usr/src \\
                                 "$SONAR_SCANNER_IMAGE" \\
                                 -Dsonar.projectKey=image-processing \\
